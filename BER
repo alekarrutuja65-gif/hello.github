@@ -1,0 +1,69 @@
+clear;
+clc;
+
+N = 10^6;                          % number of bits
+
+rand('state', 100);                % initialize rand()
+randn('state', 200);               % initialize randn()
+
+%% Transmitter
+ip = rand(1, N) > 0.5;             % generate 0s and 1s with equal probability
+s = 2 * ip - 1;                    % BPSK modulation: 0 -> -1, 1 -> +1
+
+%% Noise
+n = 1/sqrt(2) * [randn(1,N) + j*randn(1,N)];   % complex AWGN, 0dB variance
+
+%% Eb/N0 range
+Eb_N0_dB = -3:10;                  % Eb/N0 from -3 to 10 dB
+
+nErr = zeros(1, length(Eb_N0_dB));
+
+%% Simulation Loop
+for ii = 1:length(Eb_N0_dB)
+
+    % Add AWGN scaled to current Eb/N0
+    y = s + 10^(-Eb_N0_dB(ii)/20) * n;
+
+    % Receiver: hard decision decoding on real part
+    ipHat = real(y) > 0;
+
+    % Count bit errors
+    nErr(ii) = sum(ip ~= ipHat);
+
+end
+
+%% BER Calculation
+simBer = nErr / N;                                   % simulated BER
+
+theoryBer = 0.5 * erfc(sqrt(10.^(Eb_N0_dB/10)));    % theoretical BER
+
+%% Plot
+close all;
+figure;
+
+semilogy(Eb_N0_dB, theoryBer, 'b.-');
+hold on;
+
+semilogy(Eb_N0_dB, simBer, 'mx-');
+
+axis([-3 10 10^-5 0.5]);
+
+grid on;
+
+legend('Theory', 'Simulation');
+
+xlabel('Eb/No (dB)');
+ylabel('Bit Error Rate');
+
+title('Bit Error Probability Curve for BPSK Modulation');
+
+%% Display BER Table
+fprintf('\n%-12s %-15s %-15s\n', 'Eb/N0 (dB)', 'Theory BER', 'Simulated BER');
+
+fprintf('%s\n', repmat('-', 1, 44));
+
+for ii = 1:length(Eb_N0_dB)
+
+    fprintf('%-12d %-15.2e %-15.2e\n', Eb_N0_dB(ii), theoryBer(ii), simBer(ii));
+
+end
